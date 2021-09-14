@@ -1,4 +1,4 @@
-module configv2
+module github.com/ericfan17/configv2
 
 go 1.16
 
