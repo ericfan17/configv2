@@ -2,6 +2,8 @@ cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 github.com/17media/logrus v1.0.6-0.20200519050833-c3843d4d9a57 h1:JL//U7pkh+50QLPzWAQljUE0QYmC4ec4/kElGbOxa1M=
 github.com/17media/logrus v1.0.6-0.20200519050833-c3843d4d9a57/go.mod h1:i+WztySEo6XHzBPLo67OwPM0lgjYRrff34XUcuhjSVQ=
+github.com/BurntSushi/cmd v0.0.0-20121122232022-d54777ad4400 h1:NxWU+vqPG/W/n+AVQMaV4T2o/YaONlIw8YKaXRUM7PQ=
+github.com/BurntSushi/cmd v0.0.0-20121122232022-d54777ad4400/go.mod h1:BLMQWoKoIt/bljIRnnW4ZmiIL+dgLwHYM+7rgJaN+k4=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
