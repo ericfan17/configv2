@@ -118,20 +118,8 @@ type clientImpl struct {
 // init start monitoring the config file
 func (c *clientImpl) init() error {
 	ctx := context.TODO()
-	// check if root exists
-	fmt.Println("try to get")
-	resp, err := c.etcdConn.Get(ctx, c.root)
-	if err != nil {
-		logrus.Errorf("etcd client Get failed for root<%s>, err: %s", c.root, err)
-		return err
-	} else if resp.Count == 0 {
-		logrus.Errorf("etcd root<%s> doesn't exist", c.root)
-		return fmt.Errorf("etcd root<%s> doesn't exist", c.root)
-	} else if resp.Count > 1 {
-		// should not happen because we are not using options to get more than one key
-		logrus.Errorf("etcd client Get more than 1 key for root<%s>", c.root)
-		return fmt.Errorf("etcd client Get more than 1 key for root<%s>", c.root)
-	}
+	// no need to check if root dir exists for v3
+
 	// start loop monitor
 	infoPath := fmt.Sprintf(infoPrefix, c.root)
 	logrus.Infof("start to monitor %s", infoPath)
