@@ -219,7 +219,7 @@ func Pusher(etcdConn *clientv3.Client, root, etcdRoot string) {
 		log.Infof("unexpected number of kv")
 	}
 
-	// FIXME if ._info is empty, don't set etcdLastCommit to previous commit
+	// FIXME if ._info is empty, don't set etcdLastCommit to previous commit & push all keys in repo
 	// TODO: empty etcdLastCommit cause diff-tree to only print files of current commit.
 	filestr := runSingleCmdOrFatal(fmt.Sprintf("git diff-tree --no-commit-id --name-status -r %s %s %s", etcdLastCommit, commitHash, root))
 	// filter out files that are descendents of the rootpath

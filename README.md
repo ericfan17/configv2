@@ -8,7 +8,7 @@ deprecates 17media/go-etcd
 
 # TODO
 
-add pusher annd client as sample script
+only push modified files as key to etcd, currently we push all keys in repo
 
 documentation
 
