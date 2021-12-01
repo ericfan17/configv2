@@ -39,7 +39,7 @@ var (
 )
 
 func init() {
-	regexSplitWhite, _ = regexp.Compile("\\s+")
+	regexSplitWhite, _ = regexp.Compile(`\s+`)
 }
 
 // runSingleCmdOrFatal runs a command line, and fatal if either
@@ -58,7 +58,7 @@ func runSingleCmdOrFatal(line string) string {
 		log.Fatalf("error running command '%s': %s\n", line, err)
 	}
 	bs := command.BufStdout.Bytes()
-	str := string(bs[:len(bs)])
+	str := string(bs)
 	// trim \n
 	return strings.TrimRight(str, "\n\r")
 }
@@ -131,11 +131,6 @@ func filterRelatedFiles(configRoot, repoRoot string, fstr string) *[]configv2.Mo
 	return &ret
 }
 
-const (
-	// allowedOusherBranch defines the branch which is allowed to push.
-	allowedPusherBranch = "master"
-)
-
 type fileInfo struct {
 	isDir   bool
 	content []byte
@@ -172,12 +167,7 @@ func Pusher(etcdConn *clientv3.Client, root, etcdRoot string) {
 
 	// get branch name
 	branch := runSingleCmdOrFatal("git rev-parse --abbrev-ref HEAD")
-	// TODO: may need to relax this constrain.
-	/*
-		if branch != allowedPusherBranch {
-			log.Fatalf("only %s branch is allowed to push, whereas you currently are in %s", allowedPusherBranch, branch)
-		}
-	*/
+
 	fmt.Printf("using branch: %s\n", branch)
 
 	// get commit hash
@@ -205,20 +195,14 @@ func Pusher(etcdConn *clientv3.Client, root, etcdRoot string) {
 
 	ctx := context.TODO()
 
-	// check config root on etcd
-	// FIXME: check length of resp, if nothing found then test failed
-	resp, err := etcdConn.Get(ctx, remoteRoot)
-	if err != nil {
-		log.Fatalf("error testing remoteRoot, %s: %s\n", remoteRoot, err)
-	}
-	log.Infof("remoteRoot %s verified\n", remoteRoot)
+	// theres no need to check config root dir on etcd v3
 
 	// default etcdLastCommit is current repo newest commit
 	prevCFG := &configv2.ConfigInfo{}
 	etcdLastCommit := []byte(runSingleCmdOrFatal("git rev-list --max-parents=0 HEAD"))
 	etcdHasCommit := false
 	log.Infof("reading last pushed information for %s", infoPath)
-	resp, err = etcdConn.Get(ctx, infoPath)
+	resp, err := etcdConn.Get(ctx, infoPath)
 	if err != nil {
 		log.Panicf("can't connect to etcd", err)
 	} else if len(resp.Kvs) == 1 {
@@ -229,12 +213,13 @@ func Pusher(etcdConn *clientv3.Client, root, etcdRoot string) {
 			etcdHasCommit = true
 		}
 	} else if len(resp.Kvs) == 0 {
-		// previos config is empty or invalid
+		// FIXME: previos ._info is empty or invalid, we need to handle this case & push all the keys in repo
 		log.Infof("previous configInfo doesn't exist")
 	} else {
 		log.Infof("unexpected number of kv")
 	}
 
+	// FIXME if ._info is empty, don't set etcdLastCommit to previous commit
 	// TODO: empty etcdLastCommit cause diff-tree to only print files of current commit.
 	filestr := runSingleCmdOrFatal(fmt.Sprintf("git diff-tree --no-commit-id --name-status -r %s %s %s", etcdLastCommit, commitHash, root))
 	// filter out files that are descendents of the rootpath
@@ -270,6 +255,7 @@ func Pusher(etcdConn *clientv3.Client, root, etcdRoot string) {
 	// the root out from the beginning
 	sz := len(root)
 
+	// FIXME: only walk when no prev commit
 	walkFunc := func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Fatalf("Unable to traverse file %s: %s", path, err)
@@ -327,7 +313,7 @@ func Pusher(etcdConn *clientv3.Client, root, etcdRoot string) {
 	if err != nil {
 		log.Fatalf("error when marshal configInfo, err: %s", err)
 	}
-	fmt.Printf("ConfigInfo json: %s\n", string(jsonBytes[:len(jsonBytes)]))
+	fmt.Printf("ConfigInfo json: %s\n", string(jsonBytes))
 
 	// Get previous pusher information from root node for sanity check.
 	if !etcdHasCommit {
@@ -362,14 +348,7 @@ func Pusher(etcdConn *clientv3.Client, root, etcdRoot string) {
 	for _, k := range keys {
 		fileP := filepath.Join(remoteRoot, k)
 		fmt.Printf("creating or setting %s\n", fileP)
-		if content[k].isDir {
-			// FIXME: remove old code because no need to add dir
-
-			// if _, err := etcdConn.Get(ctx, fileP); err != nil {
-			// 	// dir doesn't exist
-			// 	resp, err = etcdConn.SetDir(fileP, 0)
-			// }
-		} else {
+		if !content[k].isDir {
 			_, err = etcdConn.Put(ctx, fileP, string(content[k].content))
 		}
 		if err != nil {
@@ -380,6 +359,7 @@ func Pusher(etcdConn *clientv3.Client, root, etcdRoot string) {
 
 	// go over deletes in commit
 	for _, mod := range *modFiles {
+		// v3 does not have DeleteDir method, so skip dir
 		if strings.ToLower(mod.Op) != "d" {
 			continue
 		}
@@ -391,17 +371,6 @@ func Pusher(etcdConn *clientv3.Client, root, etcdRoot string) {
 		if err != nil {
 			log.Errorf("error deleting file >%s<. Will continue. error: %s\n", fileP, err)
 		}
-		// FIXME: remove, v3 does not have DeleteDir method
-		// // since git uses a file as  a commit unit, there is nothing to do with folder.
-		// // what we are going to do is to delete each fileP which is modified with "d" and its corresponding folder.
-		// // If we still have children under that folder, deleting the folder will fail but we do not care.
-		// pDir := filepath.Join(remoteRoot, path.Dir(mod.Path))
-		// _, err = etcdConn.DeleteDir(pDir)
-		// // In normal case, we should get an error.
-		// // so just logging, if we have no error here.
-		// if err == nil {
-		// 	log.Errorf("error deleting dir >%s<.\n", pDir)
-		// }
 	}
 
 	// touch the root node with commit info
