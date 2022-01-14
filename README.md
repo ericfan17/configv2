@@ -1,3 +1,7 @@
+# deprecated
+please use
+https://github.com/17media/configv3
+
 # config
 Golang process config synchronization using etcd
 
